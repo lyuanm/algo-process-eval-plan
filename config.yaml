@@ -1,0 +1,29 @@
+# 项目配置文件（可被 .env 覆盖）
+project:
+  name: hunyuan-algo-process-eval
+  task: "犀牛鸟实战任务二 · 可验证场景：过程评估与错误定位（算法题方向）"
+
+paths:
+  problems: data/problems.json
+  samples: data/samples.json
+  results_dir: eval/results
+
+# 难度分层（用于分层分析）
+difficulty_tiers:
+  - easy
+  - medium
+  - hard
+
+# 过程评估器配置
+evaluator:
+  # llm  -> 调用 Hy3 做逐步过程审查（需要 HY3_API_KEY）
+  # rule -> 规则 + 沙盒的离线评估器（无 Key 也能跑）
+  backend: rule
+  sandbox_timeout: 5          # 单组用例执行超时（秒）
+  require_edge_case_discussion: true   # 过程是否必须讨论边界
+
+# 题集构造说明（写入报告）
+problem_sources:
+  - "经典算法竞赛/LeetCode 题型改编"
+  - "自构造可控用例以保证标准答案可自动校验"
+leveling_basis: "按时间复杂度、数据结构复杂度、边界条件数量与实现容错难度分层"

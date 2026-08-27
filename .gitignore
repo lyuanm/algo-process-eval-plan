@@ -1,0 +1,24 @@
+# 密钥 / 本地配置（切勿提交）
+.env
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 评测产物（可再生成）
+eval/results/
+
+# 抓取缓存（LeetCode 原始数据缓存，63MB，可再抓取）
+data/fetch_cache/
+
+# 旧手写题库备份（已被真实题库取代）
+backup_pbank_handwritten/
+
+# 临时/调试脚本
+tools/_scratch*.py
+tools/_stress*.py
+tools/_check_stress.py
+tools/pbank/_scratch_check.py
+tools/_tmp*.py

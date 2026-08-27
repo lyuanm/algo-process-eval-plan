@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>混元算法题 · 过程评估 Demo</title>
+<style>
+  :root{ --bg:#f7f8fa; --card:#ffffff; --ink:#1f2329; --muted:#6b7280; --line:#e5e7eb;
+         --blue:#2563eb; --green:#16a34a; --red:#dc2626; --amber:#d97706; --chip:#eef2ff; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       background:var(--bg);color:var(--ink);line-height:1.6}
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:24px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:22px}
+  .pipeline{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 26px}
+  .stage{flex:1 1 180px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+         padding:14px;position:relative}
+  .stage .num{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--blue);
+         color:#fff;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin-right:8px}
+  .stage h3{font-size:15px;margin:0 0 6px;display:inline}
+  .stage p{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+  .card h2{font-size:17px;margin:0 0 10px}
+  pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:8px;overflow:auto;font-size:12.5px}
+  code{font-family:"SF Mono",Consolas,Menlo,monospace}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .verdict{flex:1 1 260px}
+  .tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;margin-right:6px}
+  .t-bad{background:#fee2e2;color:var(--red)} .t-good{background:#dcfce7;color:var(--green)}
+  .t-warn{background:#fef3c7;color:var(--amber)} .t-info{background:var(--chip);color:var(--blue)}
+  .kv{font-size:13.5px;margin:6px 0}
+  .kv b{display:inline-block;width:120px;color:var(--muted)}
+  .mut{color:var(--muted);font-size:12.5px}
+  .foot{color:var(--muted);font-size:12px;margin-top:24px;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>混元算法题 · 过程评估与错误定位 · Demo</h1>
+  <div class="sub">可验证场景（算法题）下的过程级评估：从「解题」到「过程判定 / 错误定位」的一次完整流程。示例：S_W4 / P047（最短路径，hard）。</div>
+
+  <div class="pipeline">
+    <div class="stage"><span class="num">1</span><h3>题目</h3><p>算法题 + 测试数据 + 可自动校验的 checker</p></div>
+    <div class="stage"><span class="num">2</span><h3>Hy3 解题</h3><p>产出完整过程：思路 / 复杂度 / 边界 / 代码</p></div>
+    <div class="stage"><span class="num">3</span><h3>沙盒校验</h3><p>子进程执行代码，对照测试数据判定最终答案</p></div>
+    <div class="stage"><span class="num">4</span><h3>过程评估</h3><p>步骤判定 / 错误定位 / 错误归类 / 答案对过程错识别</p></div>
+  </div>
+
+  <div class="card">
+    <h2>① 题目 · P047 最短路径（Dijkstra，hard）</h2>
+    <p class="mut">给定无向带权图（边权非负），求从源点 src 到所有节点的最短距离；不可达输出 -1。节点 1..n。</p>
+    <p class="mut">测试数据（其一）：<code>4 4 1 / 1 2 1 / 1 3 4 / 2 3 2 / 3 4 1</code> → 期望 <code>0 1 3 4</code></p>
+  </div>
+
+  <div class="card">
+    <h2>② Hy3 解题过程（节选）</h2>
+    <p><b>思路</b>：最短路径用 Dijkstra 堆优化：优先队列按距离松弛邻边。</p>
+    <p><b>复杂度分析</b>：时间复杂度 O((V+E) log V)。</p>
+    <p><b>边界与处理</b>：不可达节点输出 -1。</p>
+    <pre>import sys
+from collections import deque
+def solve():
+    data = sys.stdin.read().split()
+    n = int(data[0]); m = int(data[1]); src = int(data[2])
+    g = [[] for _ in range(n + 1)]; idx = 3
+    for _ in range(m):
+        u = int(data[idx]); v = int(data[idx+1]); w = int(data[idx+2]); idx += 3
+        g[u].append(v); g[v].append(u)
+    dist = [-1] * (n + 1); dist[src] = 0
+    q = deque([src])
+    while q:                       # 误：用无权 BFS 代替带权 Dijkstra
+        u = q.popleft()
+        for v in g[u]:
+            if dist[v] == -1:
+                dist[v] = dist[u] + 1
+                q.append(v)
+    print(" ".join(str(dist[i]) for i in range(1, n + 1)))
+solve()</pre>
+  </div>
+
+  <div class="row">
+    <div class="card verdict">
+      <h2>③ 沙盒校验结果</h2>
+      <p class="kv"><b>最终答案</b><span class="tag t-bad">错误</span></p>
+      <p class="kv"><b>用例通过</b>0 / 3</p>
+      <p class="mut">测试 1 实际输出 <code>0 1 1 2</code>，期望 <code>0 1 3 4</code>。BFS 忽略边权，多跳路径被低估。</p>
+    </div>
+    <div class="card verdict">
+      <h2>④ 过程评估结论</h2>
+      <p class="kv"><b>过程是否成立</b><span class="tag t-bad">不成立</span></p>
+      <p class="kv"><b>错误步骤</b><span class="tag t-info">step 4 · 代码实现</span></p>
+      <p class="kv"><b>错误类型</b><span class="tag t-warn">logic_error（逻辑错误）</span></p>
+      <p class="mut">归因：思路声称 Dijkstra（带权），实现却用无权 BFS，思路与实现不符 → 过程不成立。</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>评估器有效性（验证集汇总）</h2>
+    <p><span class="tag t-info">定位准确率 80%</span> 5 个答案错误样本中 4 个正确定位错误步骤。</p>
+    <p><span class="tag t-warn">误报率 33%</span> 3 个被判无效的正确答案中，2 个为真实过程问题、1 个为误报（摊还 O(n) 滑动窗口被规则误判）。</p>
+    <p class="mut">规则评估器稳定识别「最终错→过程错」与「复杂度声称矛盾」；对归因层级与摊还复杂度的辨别较弱，生产环境建议切换 <code>llm</code> 后端（Hy3 逐步 LLM-as-judge）。</p>
+  </div>
+
+  <div class="foot">个人/活动作品，非腾讯官方发布。模型能力调用通过 Hy3（OpenAI 兼容接口）完成，无需训练/微调。详见仓库 README 与 分析报告.md。</div>
+</div>
+</body>
+</html>

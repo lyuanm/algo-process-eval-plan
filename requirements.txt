@@ -1,0 +1,6 @@
+# 犀牛鸟实战任务二 · 混元算法题过程评估器 依赖
+# 运行：pip install -r requirements.txt
+openai>=1.30.0
+pyyaml>=6.0
+python-dotenv>=1.0.0
+tencentcloud-sdk-python-hunyuan>=3.0.0  # 仅腾讯云 Hunyuan(cloud)模式需要
