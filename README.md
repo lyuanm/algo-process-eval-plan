@@ -47,7 +47,11 @@ algo-process-eval/                 # 完整实现（本地开发仓库，本 Git
 │   ├── gen_problems.py            # 聚合 pbank 模块 → problems.json
 │   ├── verify_all.py              # 题库自检（513/513）
 │   ├── gen_demo.py                # 数据驱动交互式 Web UI
+│   ├── gen_stress.py              # 差分压力输入生成（deep-ERV 数据）
 │   └── fetch/                     # 真实数据流水线（LeetCode 官方 API + 官方题解抓取）
+├── tests/                         # pytest 测试套件（题库/参考解/评估器/样本/端到端 smoke）
+├── pyproject.toml                 # 项目元数据与 pytest 配置
+├── .github/workflows/ci.yml       # GitHub Actions CI（push 自动跑测试）
 └── demo/index.html                # 交互式 UI：题目目录 + 评测结果 + 过程热力
 ```
 
@@ -116,11 +120,17 @@ python eval/run_eval.py --source live --backend llm --limit 5 --seed 1 # 固定�
 ```bash
 pip install -r requirements.txt
 
+# 运行测试套件（pytest：题库/参考解/评估器/样本/端到端 smoke）
+python -m pytest -q
+
 # 题库自检（513/513）
 python tools/verify_all.py
 
 # 离线端到端评估（rule 后端，无需 API）
 python eval/run_eval.py --source samples --backend rule
+
+# 差分压力测试（deep-ERV：以参考解为 oracle，逐压力用例差分比较）
+python eval/run_eval.py --source samples --backend rule --deep-erv
 
 # 评估器有效性验证（定位准确率 / 误报率）
 python eval/verify_evaluator.py
@@ -128,6 +138,9 @@ python eval/verify_evaluator.py
 # 生成分析报告与交互式 Web UI
 python eval/report.py
 python tools/gen_demo.py        # -> demo/index.html
+
+# 重新生成题库（聚合 pbank → problems.json → 自动挂载压力输入）
+python tools/gen_problems.py
 
 # Hy3 实时演示（配好 .env 的 HY3_API_KEY 后）
 python eval/run_eval.py --source live --backend llm --limit 3
@@ -156,15 +169,18 @@ python eval/run_eval.py --source live --backend llm --limit 3
 - `llm` 后端为 LLM-as-judge，判定存在随机性——已用自一致性多数投票缓解，并始终以 rule 后端作为离线对照。
 - 题库少数桶不足 15 题（如 hard 链表 4、easy 图 6）为 LeetCode 免费题库该域题量的硬上限，全部候选均已抓取验证。
 - `data/leetcode_meta.json` 为 2023 年快照，44 道 LCR/剑指 Offer/竞赛题不在其中；这些题均经实时官方 API 验证真实存在，难度由官方数据源直接给出。
-- 本仓库当前仅含方案文档；完整实现代码位于本地开发仓库，按需另行提交。
+- 差分压力输入覆盖 363/513 题（71%）；其余为设计类（操作序列）或官方参考解对约束外输入脆弱的题，压力输入不挂载（deep-ERV 对该部分题自动降级为仅主测试集）。
 
 ## 7. 验证
 
 ```text
-题库自检       513/513 通过（verify_all.py）
+pytest 测试套件   19 passed（题库/参考解抽样/评估器单元/样本真值/端到端 smoke）
+题库自检       513/513 通过（tools/verify_all.py）
 评测样本自洽   15/15（tools/fetch/gen_samples2.py 生成并自检）
-评估器有效性   定位准确率 100% / 误报率 0%（verify_evaluator.py）
+评估器有效性   定位准确率 100% / 误报率 0%（eval/verify_evaluator.py）
+deep-ERV      363/513 题挂载压力输入，stress_summary 逐样本输出差分结果
 端到端评估     samples+rule / live+llm / deep-ERV 全部可运行
+CI            GitHub Actions：push 自动跑 pytest + 题库加载检查
 ```
 
 详细设计、错误分类体系、重点技术与时间规划见 **[方案文档.md](./方案文档.md)**。

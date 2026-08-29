@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: 安装依赖
+        run: |
+          pip install pytest
+          pip install -e .
+
+      - name: 题库快速自检（513 题全量自验见 tools/verify_all.py）
+        run: |
+          python - <<'EOF'
+          import sys; sys.path.insert(0, ".")
+          from src.problems import load_problems
+          from src.sandbox import run_code
+          ps = load_problems("data/problems.json")
+          assert len(ps) >= 500, len(ps)
+          print(f"题库 {len(ps)} 题加载 OK")
+          EOF
+
+      - name: pytest（参考解抽样自洽 / 评估器 / 样本真值 / 端到端 smoke）
+        run: pytest -q

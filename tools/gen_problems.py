@@ -39,6 +39,13 @@ def main():
     c = Counter(p["difficulty"] for p in uniq)
     print(f"已写出 {len(uniq)} 题 -> {OUT}")
     print(f"难度分布: {dict(c)}")
+    # 自动挂载差分压力输入（deep-ERV 依赖），失败不阻塞
+    try:
+        from tools.gen_stress import main as gen_stress_main
+        import sys as _sys
+        gen_stress_main()
+    except Exception as e:
+        print(f"压力输入生成跳过：{e}")
 
 
 if __name__ == "__main__":
