@@ -169,16 +169,16 @@ python eval/run_eval.py --source live --backend llm --limit 3
 - `llm` 后端为 LLM-as-judge，判定存在随机性——已用自一致性多数投票缓解，并始终以 rule 后端作为离线对照。
 - 题库少数桶不足 15 题（如 hard 链表 4、easy 图 6）为 LeetCode 免费题库该域题量的硬上限，全部候选均已抓取验证。
 - `data/leetcode_meta.json` 为 2023 年快照，44 道 LCR/剑指 Offer/竞赛题不在其中；这些题均经实时官方 API 验证真实存在，难度由官方数据源直接给出。
-- 差分压力输入覆盖 363/513 题（71%）；其余为设计类（操作序列）或官方参考解对约束外输入脆弱的题，压力输入不挂载（deep-ERV 对该部分题自动降级为仅主测试集）。
+- 差分压力输入覆盖 379/513 题（73%）；其余为设计类（操作序列）或官方参考解对约束外输入脆弱的题，压力输入不挂载（deep-ERV 对该部分题自动降级为仅主测试集）。
 
 ## 7. 验证
 
 ```text
-pytest 测试套件   19 passed（题库/参考解抽样/评估器单元/样本真值/端到端 smoke）
+pytest 测试套件   29 passed（题库/参考解/包装/评估器/样本/端到端 smoke）
 题库自检       513/513 通过（tools/verify_all.py）
 评测样本自洽   15/15（tools/fetch/gen_samples2.py 生成并自检）
 评估器有效性   定位准确率 100% / 误报率 0%（eval/verify_evaluator.py）
-deep-ERV      363/513 题挂载压力输入，stress_summary 逐样本输出差分结果
+deep-ERV      379/513 题挂载压力输入，stress_summary 逐样本输出差分结果
 端到端评估     samples+rule / live+llm / deep-ERV 全部可运行
 CI            GitHub Actions：push 自动跑 pytest + 题库加载检查
 ```
