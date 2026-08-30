@@ -6,6 +6,7 @@
 输出：每题通过数/总数，末尾汇总失败清单（若有）。
 """
 import sys, os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
@@ -14,6 +15,7 @@ from src.problems import Problem, TestCase, verify_problem_testcases
 from tools.pbank import collect
 
 PREFIXES = sys.argv[1:]
+WORKERS = int(os.environ.get("VERIFY_WORKERS", "8"))
 
 
 def to_prob(p):
@@ -32,14 +34,23 @@ def main():
     problems = collect()
     if PREFIXES:
         problems = [p for p in problems if any(p["id"].upper().startswith(x.upper()) for x in PREFIXES)]
-    print(f"待检题目数：{len(problems)}")
+    print(f"待检题目数：{len(problems)}（并行 {WORKERS} 路）")
     fails = []
-    for p in problems:
+
+    def check(p):
         r = verify_problem_testcases(to_prob(p), timeout=8.0)
-        flag = "OK " if r["all_passed"] else "FAIL"
-        print(f"  [{flag}] {p['id']:6} {p['source']:12} {p['title']}  ({r['passed']}/{r['total']})")
-        if not r["all_passed"]:
-            fails.append((p["id"], p["title"], r["details"]))
+        return p, r
+
+    with ThreadPoolExecutor(max_workers=WORKERS) as ex:
+        futs = {ex.submit(check, p): p for p in problems}
+        for i, fut in enumerate(as_completed(futs), 1):
+            p, r = fut.result()
+            flag = "OK " if r["all_passed"] else "FAIL"
+            print(f"  [{flag}] {p['id']:6} {p['source']:12} {p['title']}  ({r['passed']}/{r['total']})")
+            if not r["all_passed"]:
+                fails.append((p["id"], p["title"], r["details"]))
+            if i % 100 == 0:
+                print(f"  ...进度 {i}/{len(problems)}", flush=True)
     print("\n==== 汇总 ====")
     print(f"总数 {len(problems)}，通过 {len(problems) - len(fails)}，失败 {len(fails)}")
     for pid, title, det in fails:

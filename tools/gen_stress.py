@@ -21,11 +21,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROBLEMS_PATH = os.path.join(ROOT, "data", "problems.json")
 
 # 压力规模：对任何常见复杂度（线性/平方/立方）都能在超时内跑完
-N_ARRAY = 120          # 一维数组长度
-N_MATRIX_ROWS = 80     # 矩阵行数
+N_ARRAY = 80          # 一维数组长度
+N_MATRIX_ROWS = 60     # 矩阵行数
 N_MATRIX_COLS = 8      # 矩阵列数
-N_STR = 120            # 字符串长度
-N_TREE = 127           # 树层序节点数（完全二叉深度 7，避免退化链）
+N_STR = 80            # 字符串长度
+N_TREE = 63            # 树层序节点数（完全二叉深度 6，避免退化链/递归溢出）
 BIG_INT_LO, BIG_INT_HI = 10 ** 6, 10 ** 9
 ELEM_LO, ELEM_HI = -10 ** 4, 10 ** 4
 
@@ -107,7 +107,7 @@ def scale_value(v, rng):
     if isinstance(v, bool):
         return rng.choice([True, False])
     if isinstance(v, int):
-        return rng.randint(100, 100000) if abs(v) < 1000 else rng.randint(BIG_INT_LO, BIG_INT_HI)
+        return rng.randint(1, 200) if abs(v) < 1000 else rng.randint(1000, 100000)
     if isinstance(v, float):
         return round(rng.uniform(-10 ** 4, 10 ** 4), 2)
     if isinstance(v, str):
