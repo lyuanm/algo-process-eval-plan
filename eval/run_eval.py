@@ -50,12 +50,14 @@ def select_live_targets(problems, ids, limit, seed):
     return all_ids
 
 
-def _emit(jf, rows, res, prob):
+def _emit(jf, rows, res, prob, raw=""):
     """写一条评估记录到 jsonl 并打印。"""
     rec = res.to_dict()
     rec["difficulty"] = prob.difficulty
     rec["domain"] = prob.domain
     rec["title"] = prob.title
+    if raw:
+        rec["raw"] = raw  # Hy3/样本完整解题过程（评审与 UI 展示用）
     jf.write(json.dumps(rec, ensure_ascii=False) + "\n")
     rows.append(rec)
     print(
@@ -83,6 +85,8 @@ def main():
                     help="live 随机选题种子（默认固定，保证演示可复现）")
     ap.add_argument("--problems", default=PROBLEMS_PATH)
     ap.add_argument("--samples", default=SAMPLES_PATH)
+    ap.add_argument("--quiet", action="store_true",
+                    help="live 模式不打印 Hy3 完整解题过程（默认打印，供现场演示）")
     args = ap.parse_args()
 
     problems = {p.id: p for p in load_problems(args.problems)}
@@ -114,10 +118,15 @@ def main():
         if args.source == "live":
             for pid in targets:
                 prob = problems[pid]
+                print(f"\n{'='*70}\n[求解] {prob.id} {prob.title}（{prob.difficulty} · {prob.domain}）")
+                print(f"{'='*70}")
                 sol = solve_problem(client, prob)
                 sol.sample_id = f"LIVE_{pid}"
+                if not args.quiet:
+                    print(f"\n[Hy3 解题过程]\n{(sol.raw or '').strip()}\n")
+                print("-" * 70)
                 res = evaluator.evaluate(prob, sol)
-                _emit(jf, rows, res, prob)
+                _emit(jf, rows, res, prob, raw=sol.raw or "")
         else:
             for sample in samples:
                 prob = problems[sample["problem_id"]]
