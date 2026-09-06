@@ -39,7 +39,7 @@ def _safe_import(name, *a, **k):
 
 _restricted = dict(_bm.__dict__)
 _restricted['__import__'] = _safe_import
-_user_globals = {{'__builtins__': _restricted}}
+_user_globals = {{'__builtins__': _restricted, '__name__': '__main__'}}
 with open({code_path!r}, 'r', encoding='utf-8') as _f:
     _src = _f.read()
 exec(_src, _user_globals)
