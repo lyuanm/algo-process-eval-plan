@@ -26,7 +26,7 @@ Algorithm problem evaluation cannot be judged by final answers alone: a candidat
 ## 1. 系统架构
 
 ```text
-algo-process-eval/                 # 完整实现（本地开发仓库，本 GitHub 仓库仅含方案文档）
+algo-process-eval/                 # 完整实现（本仓库已包含全部源码、题库与评测材料）
 ├── src/
 │   ├── solver.py                  # Hy3 求解：四段式解题过程（思路/复杂度/边界/代码）
 │   ├── sandbox.py                 # 受限沙盒执行：子进程 + 超时 + 导入白名单，逐用例 verdict
@@ -53,25 +53,40 @@ algo-process-eval/                 # 完整实现（本地开发仓库，本 Git
 │   ├── gen_dashboard.py           # 全量指标看板（demo/dashboard.html）
 │   ├── gen_full_report.py         # 全量评测报告（Markdown）
 │   ├── gen_run_logs.py            # 渲染全量日志（Hy3 原始回答 + 判定过程）+ 缓存补导出
+│   ├── gen_demo_video.py          # 生成 2 分钟 demo 视频/GIF（真实数据驱动，非录屏）
+│   ├── verify_inline.py           # 校验导入的解答能否通过沙盒（逐题 PASS/FAIL）
+│   ├── import_inline_solutions.py # 导入解答到缓存（含四段式与语法校验、--force 覆盖）
 │   ├── preflight_consistency.py   # 预检：判定一致性不变量（真实数据，不写正式缓存）
 │   ├── diagnose_api.py            # 诊断网关失败原因（超时/限流/content 为空）
 │   ├── check_dashboard.js         # 看板自检：DOM 桩真实执行渲染脚本（CI 可用）
 │   ├── gen_stress.py              # 差分压力输入生成（deep-ERV 数据）
 │   └── fetch/                     # 真实数据流水线（LeetCode 官方 API + 官方题解抓取）
-├── tests/                         # pytest 测试套件（题库/参考解/评估器/样本/端到端 smoke）
+├── tests/                         # pytest 测试套件（题库/参考解/评估器/跑批/日志/端到端 smoke）
 ├── pyproject.toml                 # 项目元数据与 pytest 配置
 ├── .github/workflows/ci.yml       # GitHub Actions CI（push 自动跑测试）
 └── demo/
     ├── index.html                 # 交互式 UI：题目目录 + 评测结果 + 过程热力
-    └── dashboard.html             # 全量评测看板：513 题指标 + 逐题明细
+    ├── dashboard.html             # 全量评测看板：513 题指标 + 逐题明细
+    ├── demo_be08.mp4              # 2 分钟 demo 视频（完整解题与过程评估流程）
+    └── demo_be08_核心片段.gif       # 48 秒核心片段 GIF
 ```
 
-本 GitHub 仓库内容：
+本仓库内容（完整交付）：
 
 ```text
 algo-process-eval-plan/
-├── README.md          # 本文档（方案门户）
-└── 方案文档.md         # 完整方案：设计思路/架构/重点技术/预期效果/时间规划
+├── README.md / 方案文档.md / 分析报告.md / 全量评测报告.md   # 门户文档与评测报告
+├── 演示指引.md                     # 现场演示流程与脚本
+├── src/                           # 应用源码 + 过程评估模块
+├── eval/                          # 评测脚本 / 有效性验证 / 全量跑批 / 全量日志
+├── tools/                         # 题库构建、看板、报告、日志、视频生成脚本
+├── tests/                         # pytest 测试套件（62 passed）
+├── data/                          # 513 题题库（含官方参考解与官方测试用例）
+├── demo/                          # 指标看板、交互 UI、demo 视频
+└── .github/workflows/ci.yml       # CI
+
+各交付项的完整索引（按「仓库 / 评测材料 / 完整结果 / 有效性验证 / 分析报告」五类）
+见 分析报告.md §9。
 ```
 
 ## 过程总览
@@ -157,6 +172,10 @@ python tools/gen_full_report.py # -> 全量评测报告.md
 python tools/gen_run_logs.py    # -> eval/logs/*.md（Hy3 原始回答 + 判定过程全量日志）
 node tools/check_dashboard.js   # 看板自检：真实执行渲染脚本，逐容器校验
 
+# 生成 2 分钟 demo 视频 / GIF（真实评测数据驱动，非录屏；需 Pillow + ffmpeg）
+python tools/gen_demo_video.py            # -> demo/demo_be08.mp4 + 核心片段 GIF
+python tools/gen_demo_video.py --id DM13  # 换一道题作主角
+
 # 重新生成题库（聚合 pbank → problems.json → 自动挂载压力输入）
 python tools/gen_problems.py
 
@@ -232,30 +251,59 @@ python eval/run_eval.py --source live --backend llm --limit 3
 `python tools/gen_run_logs.py` 负责渲染人可读日志，并把已有解答缓存**补导出**为 trace 记录
 （标记 `backfilled=true`），使日志覆盖全量题目而无需重跑烧 API。
 
-## 7. Hy3 接入边界
+## 7. Demo 视频（2 分钟：一次完整的解题与过程评估流程）
+
+- `demo/demo_be08.mp4`（**110 秒**）—— 完整流程
+- `demo/demo_be08_核心片段.gif`（48 秒）—— 沙盒 ERV → 差分压力测试 → 过程评估判定
+- 一键重出：`python tools/gen_demo_video.py`（换主角题：`--id DM13`）
+
+视频**不是录屏**，而是脚本读取真实评测产物逐帧渲染（Pillow + ffmpeg），因此：
+
+- **可复现**：录屏依赖桌面环境、窗口大小与字体，无法复现；脚本渲染的内容完全由数据决定，重跑结果一致；
+- **数据同源**：片中的题面、逐用例 verdict、压力测试结果、四步骤判定与整体指标，分别来自
+  `data/problems.json`、`eval/logs/eval_trace.jsonl`、`eval/results/full_summary_rule.json`，
+  与报告、看板完全一致，不存在「演示素材与报告指标对不上」的风险。
+
+主角题选 **BE08「山脉数组的峰顶索引」**（LeetCode LCR 069），因为它最能体现增量价值：
+官方 5 组用例**全部通过**（传统判题判它「完全掌握」），但 deep-ERV 以官方参考解为 oracle
+生成大规模输入后出现 **WA（期望 2 / 实际 73）**，过程评估据此定位到 **step 4 代码实现 ·
+逻辑错误**，最终判定「答案正确 ✓ 但过程不成立 ✗」。
+
+| 段落 | 时长 | 内容 |
+|---|---|---|
+| ① 出题 | 6s | 只把题面交给模型，不提供标准答案 |
+| ② 题目 | 12s | 题目卡（题号/难度/算法域/用例数）+ 题面 + 数据来源 |
+| ③ Hy3 求解 | 24s | 四段式解题过程逐段展开（思路→复杂度→边界→代码） |
+| ④ 沙盒 ERV | 14s | 官方 5 组用例逐条执行，全部 AC |
+| ⑤ 差分压力测试 | 13s | deep-ERV 差分比较 → 红框标出 WA |
+| ⑥ 过程评估判定 | 21s | 四步骤逐级判定，step4 失败 + 错误定位 |
+| ⑦ 全量结果 | 14s | 513 题：答案正确率 / 过程正确率 / 答案对但过程错 |
+| ⑧ 结尾 | 6s | 仓库地址与复现入口 |
+
+## 8. Hy3 接入边界
 
 1. `src/hy3_client.py` 提供 OpenAI 兼容（TokenHub）与腾讯云 Hunyuan SDK 双通道；API key 只放 `.env`，凭证缺失自动降级离线 Mock，流程不中断。
 2. `src/solver.py` 按固定模板让 Hy3 输出四段式解题过程（思路/复杂度/边界/可运行代码），`parse_solution` 解析为结构化 `Solution`。
 3. `eval/run_eval.py --backend llm` 让独立的 Hy3 Judge 审查四步骤，输入包含沙盒逐用例执行事实（金标准），输出逐步判定结论。
 4. 少量题接口（`--limit`/`--ids`）控制演示成本，避免 Hy3 输出全量 513 题。
 
-## 8. 当前限制
+## 9. 当前限制
 
 - `llm` 后端为 LLM-as-judge，判定存在随机性——已用自一致性多数投票缓解，并始终以 rule 后端作为离线对照。
 - 题库少数桶不足 15 题（如 hard 链表 4、easy 图 6）为 LeetCode 免费题库该域题量的硬上限，全部候选均已抓取验证。
 - `data/leetcode_meta.json` 为 2023 年快照，44 道 LCR/剑指 Offer/竞赛题不在其中；这些题均经实时官方 API 验证真实存在，难度由官方数据源直接给出。
 - 差分压力输入覆盖 379/513 题（73%）；其余为设计类（操作序列）或官方参考解对约束外输入脆弱的题，压力输入不挂载（deep-ERV 对该部分题自动降级为仅主测试集）。
 
-## 9. 验证
+## 10. 验证
 
 ```text
-pytest 测试套件   40 passed（题库/参考解/包装/评估器/样本/跑批/端到端 smoke）
+pytest 测试套件   62 passed（题库/参考解/包装/评估器/样本/跑批/端到端 smoke）
 题库自检       513/513 通过（tools/verify_all.py）
 评测样本自洽   15/15（tools/fetch/gen_samples2.py 生成并自检）
 评估器有效性   定位准确率 100% / 误报率 0%（eval/verify_evaluator.py）
 deep-ERV      379/513 题挂载压力输入，stress_summary 逐样本输出差分结果
 端到端评估     samples+rule / live+llm / deep-ERV 全部可运行
-看板自检       tools/check_dashboard.js：13 个容器全部渲染正常（DOM 桩真实执行渲染脚本）
+看板自检       tools/check_dashboard.js：14 个容器全部渲染正常（DOM 桩真实执行渲染脚本）
 判定一致性     步骤级判定与总体判定对齐，由回归测试锁定不变量
 CI            GitHub Actions：push 自动跑 pytest + 题库加载检查
 ```
