@@ -176,6 +176,15 @@ node tools/check_dashboard.js   # 看板自检：真实执行渲染脚本，逐�
 python tools/gen_demo_video.py            # -> demo/demo_be08.mp4 + 核心片段 GIF
 python tools/gen_demo_video.py --id DM13  # 换一道题作主角
 
+# 录制真实录屏版：开录屏后运行，约 105 秒自动推进（完整步骤见 演示指引.md §8）
+python tools/demo_replay.py               # 真实执行评估 + 逐镜头展示各环节数据
+python tools/demo_replay.py --fast        # 不等待，仅自检脚本内容（约 6 秒）
+
+# 少量题演示：只跑本地评估阶段，几秒完成、不消耗 API 额度
+#   --eval-out 必须指向临时文件，否则演示数据会写进正式缓存，
+#   下次全量跑批会因缓存命中而跳过这些题，正式指标也被污染
+python eval/run_full.py --skip-solve --ids BE08 --deep-erv --eval-out /tmp/demo.jsonl
+
 # 重新生成题库（聚合 pbank → problems.json → 自动挂载压力输入）
 python tools/gen_problems.py
 

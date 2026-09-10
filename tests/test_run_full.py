@@ -123,3 +123,37 @@ def test_backoff_sleep_exponential_with_jitter_and_cap(monkeypatch):
 
     assert delays[0] < delays[2], "退避应随尝试次数递增"
     assert all(d <= 20.0 for d in delays), "退避不得超过上限"
+
+
+def test_resolve_paths_isolates_demo_output(tmp_path):
+    """少量题演示必须能把结果写到独立文件。
+
+    `evaluate_all` 会跳过「已缓存」的题。若演示结果落进正式缓存
+    （`eval/results/full_eval_<backend>.jsonl`），这些题在下次全量跑批时会被直接跳过，
+    正式指标同时被演示数据污染 —— 而这两种后果都不会报错，属于静默失真。
+    """
+    a, b = run_full.resolve_paths("rule")
+    assert a.replace("\\", "/").endswith("eval/results/full_eval_rule.jsonl")
+    assert b.replace("\\", "/").endswith("eval/results/full_summary_rule.json")
+
+    demo = str(tmp_path / "demo_eval.jsonl")
+    c, d = run_full.resolve_paths("rule", demo)
+    assert c == demo, "显式指定时必须原样使用"
+    assert d == str(tmp_path / "demo_eval_summary.json"), "汇总文件应与结果同目录同名"
+    assert c != a and d != b, "演示路径不得与正式路径重合"
+
+
+def test_filter_by_ids_limits_eval_scope():
+    """`--ids` 必须同时约束评估范围。
+
+    否则 `--skip-solve --ids X`（演示场景的唯一可行组合）会评估全部已缓存题目，
+    本意是「跑 1 题看效果」的运行变成跑几百题，演示流程根本走不完。
+    """
+    raws = {"BE08": "x", "AH01": "y", "CM02": "z"}
+
+    assert run_full.filter_by_ids(raws, []) == raws, "未指定 ids 时不应改动"
+    got = run_full.filter_by_ids(raws, ["BE08", "AH01"])
+    assert list(got) == ["AH01", "BE08"], "应按题号有序，便于日志阅读"
+    assert got == {"AH01": "y", "BE08": "x"}
+    assert run_full.filter_by_ids(raws, ["ZZ99"]) == {}, "全部不匹配时返回空"
+    assert list(raws) == ["BE08", "AH01", "CM02"], "不得修改入参（调用方仍要用全量汇总）"

@@ -277,6 +277,13 @@ def evaluate_all(problems, raws, backend, workers, out_path, timeout, deep_erv, 
                     "title": prob.title, "eval_sec": round(time.time() - t, 2)})
         # 完整留存判定依据：逐用例 verdict + 四步骤 + 归因 + 被评估的模型输出
         runlog.log_eval(prob, rec, raws[pid])
+        # 逐题打印判定摘要：全量跑批时可实时观察；少量题演示时终端本身就是演示画面
+        ans = "✓" if rec.get("final_correct") else "✗"
+        proc = "✓" if rec.get("process_valid") else "✗"
+        where = (f"  定位 step{rec.get('error_step')} {rec.get('error_type_name') or ''}"
+                 if not rec.get("process_valid") else "")
+        log(f"  [{pid}] 答案{ans} 过程{proc}{where}"
+            f"｜用例 {rec.get('verdict_summary') or '-'}")
         return rec
 
     with ThreadPoolExecutor(max_workers=workers) as ex:
@@ -367,13 +374,40 @@ def summarize(recs, problems, backend, out_path, solve_cache_note=""):
     return summary
 
 
+def resolve_paths(backend, eval_out=None):
+    """返回 (评估结果路径, 汇总路径)。
+
+    默认落在 `eval/results/full_eval_<backend>.jsonl`；演示或试跑时必须用 `--eval-out`
+    指向临时文件 —— evaluate_all 会跳过「已缓存」的题，若把演示结果写进正式缓存，
+    这些题在下次全量跑批时会被直接跳过，正式指标也被演示数据污染。
+    """
+    if eval_out:
+        return eval_out, os.path.splitext(eval_out)[0] + "_summary.json"
+    return (os.path.join(RES_DIR, f"full_eval_{backend}.jsonl"),
+            os.path.join(RES_DIR, f"full_summary_{backend}.json"))
+
+
+def filter_by_ids(raws, ids):
+    """按 `--ids` 过滤待评估解答（保持题号有序，便于日志阅读）。"""
+    if not ids:
+        return raws
+    want = set(ids)
+    return {k: v for k, v in sorted(raws.items()) if k in want}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=8, help="求解并发（API 侧）")
     ap.add_argument("--eval-workers", type=int, default=6, help="评估并发（沙盒子进程侧）")
     ap.add_argument("--backend", choices=["rule", "llm"], default="rule")
     ap.add_argument("--limit", type=int, default=None)
-    ap.add_argument("--ids", nargs="*", default=[])
+    ap.add_argument("--ids", nargs="*", default=[],
+                    help="只处理指定题号。会**同时约束求解与评估两个阶段**；否则 "
+                         "`--skip-solve --ids X` 仍会评估全部已缓存题目")
+    ap.add_argument("--eval-out", default=None,
+                    help="评估结果输出文件（默认 eval/results/full_eval_<backend>.jsonl）。"
+                         "演示/试跑务必指向临时文件：写进正式缓存后，下次全量跑批会因"
+                         "缓存命中而跳过这些题，正式指标也会被演示数据污染")
     ap.add_argument("--timeout", type=float, default=8.0)
     ap.add_argument("--api-timeout", type=int, default=None,
                     help="求解阶段单次 API 请求超时（秒），默认沿用客户端的 180；"
@@ -397,8 +431,9 @@ def main():
 
     os.makedirs(RES_DIR, exist_ok=True)
     problems = {p.id: p for p in load_problems(args.problems)}
-    eval_path = os.path.join(RES_DIR, f"full_eval_{args.backend}.jsonl")
-    sum_path = os.path.join(RES_DIR, f"full_summary_{args.backend}.json")
+    eval_path, sum_path = resolve_paths(args.backend, args.eval_out)
+    if args.eval_out:
+        os.makedirs(os.path.dirname(os.path.abspath(eval_path)), exist_ok=True)
 
     if args.summary_only:
         recs = read_jsonl(eval_path)
@@ -413,6 +448,17 @@ def main():
     else:
         raws = solve_all(problems, args.ids, args.limit, args.workers, SOL_CACHE,
                          api_timeout=args.api_timeout, model=args.model)
+
+    # --ids 必须同时约束评估阶段：`--skip-solve` 时 raws 来自全量缓存，不过滤的话
+    # 本意是「少量题演示」的运行仍会评估几百道题，演示流程根本跑不完。
+    if args.ids:
+        missing = sorted(set(args.ids) - set(raws))
+        raws = filter_by_ids(raws, args.ids)
+        log(f"[范围] --ids 限定 {len(raws)} 题：{', '.join(raws) or '（空）'}"
+            + (f"｜缓存中缺：{', '.join(missing)}" if missing else ""))
+        if not raws:
+            log("[范围] 指定题号均无可用解答，退出")
+            return
 
     if args.skip_eval:
         recs = read_jsonl(eval_path)
