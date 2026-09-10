@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import re
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from .problems import Problem
@@ -75,6 +75,10 @@ class ProcessEvalResult:
     first_failure_verdict: Optional[str] = None
     stress_summary: str = ""         # 压力测试差分汇总（与参考解一致性）
     confidence: Optional[float] = None
+    # 逐用例明细：判定依据（期望/实际/异常）必须完整留存，否则「答案错在哪」
+    # 只能看汇总计数而无法复核，日志也就失去了可追溯的意义。
+    case_verdicts: List[Dict] = field(default_factory=list)
+    stress_case_verdicts: List[Dict] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
         d = asdict(self)
@@ -105,10 +109,64 @@ def _claimed_complexity(reasoning: str) -> Optional[str]:
     return m.group(1).strip() if m else None
 
 
-def _uses_hash(reasoning: str, code: str) -> bool:
-    return ("哈希" in reasoning or "hash" in reasoning.lower() or "字典" in reasoning) and (
-        "dict" in code or "set(" in code or "{}" in code
-    )
+_HASH_WORDS = ("哈希", "hash", "字典", "散列", "哈希表", "dict", "set")
+# 否定/对比/备选语境：出现这些词的句子不算「声称主算法是哈希」
+_HASH_NEG_CONTEXT = (
+    "不需要", "无需", "不必", "也可以", "可以不用", "可以省略", "不使用", "不用",
+    "若", "如果", "假如", "而不是", "而非", "相比", "替代", "或者", "或是", "不如",
+    "考虑", "可选", "否则", "但", "虽然", "省去", "避免", "不必要", "未必",
+    "亦不", "并不", "改用", "换成", "优于", "劣于", "没有用", "未使用", "没用",
+)
+# 紧邻匹配位置前的否定字（处理「故不使用哈希表」这类被前缀否定的表述）
+_HASH_NEG_PREFIX = re.compile(r"[不无未非勿免没莫]")
+
+
+def _has_neg_prefix(sent_low: str, pos: int, width: int = 4) -> bool:
+    """匹配位置前 width 个字符内是否有否定字（如「不使用」中的「不」）。"""
+    return bool(_HASH_NEG_PREFIX.search(sent_low[max(0, pos - width):pos]))
+
+# 代码中「确实使用了哈希类结构」的证据
+_HASH_CODE_PATTERNS = (
+    r"\b(dict|set|frozenset|Counter|defaultdict|OrderedDict)\s*\(",
+    r"\{[^{}]*:[^{}]*\}",           # 字典字面量 / 字典推导
+    r"\{[^{}]*\bfor\b[^{}]*\}",      # 集合或字典推导
+    r"\{\s*\}",                      # 空字典
+    r"\{\s*[\w'\"]+(\s*,\s*[\w'\"]+)+\s*\}",  # 集合字面量 {1, 2, 3}
+    r"\.setdefault\(",
+)
+
+
+def _code_uses_hash(code: str) -> bool:
+    """代码中是否真的用到了哈希类结构（dict/set/Counter/推导式等）。"""
+    return any(re.search(p, code) for p in _HASH_CODE_PATTERNS)
+
+
+def _hash_claim_mismatch(reasoning: str, code: str) -> bool:
+    """「声称用哈希、代码却没用」的一致性检测。
+
+    只在推理**明确宣称主算法基于哈希结构**时才算不一致：逐句判断，跳过否定/对比/
+    备选语境的句子（如「也可用哈希表，但本题排序即可」），避免把备选方案当成声称。
+    代码侧一旦发现任何哈希结构即判定一致（宁可漏报，不可误报）。
+    """
+    if _code_uses_hash(code):
+        return False
+    for sent in re.split(r"[。；;！!\n]|\.\s", reasoning):
+        low = sent.lower()
+        if not any(w in low for w in _HASH_WORDS):
+            continue
+        if any(neg in sent for neg in _HASH_NEG_CONTEXT):
+            continue
+        # 「使用/借助/通过/利用/用/维护/基于 + 哈希类结构」的肯定式表述
+        m = re.search(
+            r"(使用|采用|借助|通过|利用|基于|维护|建立|构造|引入|借助一个|开辟)"
+            r"[^，。；]{0,8}(哈希|字典|散列|hash|dict|set)", low
+        )
+        if m and not _has_neg_prefix(low, m.start()):
+            return True
+        m2 = re.search(r"(哈希|字典|散列)(表|映射)?[^，。；]{0,4}(来|用于|进行|统计|计数|查找|记录|存储|映射)", low)
+        if m2 and not _has_neg_prefix(low, m2.start()):
+            return True
+    return False
 
 
 def _parse_reasoning_steps(reasoning: str):
@@ -149,6 +207,23 @@ def _format_verdict_facts(ev) -> str:
 
 
 # ----------------------------- 规则评估器 -----------------------------
+def _align_step_verdicts(step_verdicts: List[StepVerdict], error_step, error_type, note: str) -> None:
+    """让步骤级判定与总体判定保持一致（就地修改）。
+
+    步骤判定通常在失败归因之前生成，只有复杂度冲突会即时回写，于是会出现
+    「总体判定为过程不成立、但 error_step 指向的那一步仍显示『无明显问题』」
+    的自相矛盾——看板上会表现为「四步全绿却判定失败」，直接损害结果可信度。
+    返回前统一对齐：error_step 指向的步骤必须标记为不通过，并写入归因说明。
+    """
+    if error_step is None:
+        return
+    tag = ERROR_TYPES.get(error_type) or "过程不成立"
+    for sv in step_verdicts:
+        if sv.step == error_step and sv.ok:
+            sv.ok = False
+            sv.reason = f"{tag}——{note}" if note else tag
+
+
 class RuleBasedProcessEvaluator:
     """离线评估器：沙盒「可执行验证(ERV)」+ 规则启发式。生产环境建议切换 llm 后端。"""
 
@@ -205,13 +280,11 @@ class RuleBasedProcessEvaluator:
                 error_step = STEP_COMPLEXITY
                 error_type = "complexity_error"
                 note = "最终答案通过，但复杂度声称与代码实现不一致（过程不成立）。"
-            elif _uses_hash(solution.reasoning, solution.code) is False and (
-                "哈希" in solution.reasoning or "hash" in solution.reasoning.lower()
-            ):
+            elif _hash_claim_mismatch(solution.reasoning, solution.code):
                 process_valid = False
                 error_step = STEP_APPROACH
                 error_type = "concept_error"
-                note = "声称使用哈希表，但代码未使用相应结构（方法名实不符）。"
+                note = "明确声称主算法基于哈希结构，但代码未使用相应结构（方法名实不符）。"
             else:
                 process_valid = True
                 note = f"最终答案通过（{ev.summary}）"
@@ -220,6 +293,8 @@ class RuleBasedProcessEvaluator:
                     error_step = STEP_CODE
                     error_type = "logic_error"
                     note = "主测试集通过，但压力测试未通过（过程疑似巧合成立，稳健性不足）。"
+
+        _align_step_verdicts(step_verdicts, error_step, error_type, note)
 
         return ProcessEvalResult(
             problem_id=solution.problem_id,
@@ -237,6 +312,8 @@ class RuleBasedProcessEvaluator:
             verdict_summary=ev.summary,
             first_failure_verdict=fv.verdict if fv else None,
             stress_summary=sv.summary if sv is not None else "",
+            case_verdicts=[asdict(c) for c in ev.cases],
+            stress_case_verdicts=[asdict(c) for c in sv.cases] if sv is not None else [],
         )
 
 
@@ -373,6 +450,8 @@ class LLMProcessEvaluator:
 
         note = stress_note or best_note or f"LLM 裁判（{self.judge_samples} 次投票）结论。"
 
+        _align_step_verdicts(best_step_verdicts, error_step, error_type, note)
+
         return ProcessEvalResult(
             problem_id=solution.problem_id,
             sample_id=getattr(solution, "sample_id", solution.problem_id),
@@ -390,6 +469,8 @@ class LLMProcessEvaluator:
             first_failure_verdict=fv.verdict if fv else None,
             stress_summary=sv.summary if sv is not None else "",
             confidence=round(avg_conf, 3),
+            case_verdicts=[asdict(c) for c in ev.cases],
+            stress_case_verdicts=[asdict(c) for c in sv.cases] if sv is not None else [],
         )
 
     @staticmethod

@@ -1,0 +1,76 @@
+{
+  "localization_accuracy": {
+    "denominator": 5,
+    "hits": 5,
+    "accuracy": 1.0,
+    "detail": [
+      {
+        "sample_id": "S_W_lm05",
+        "hit": true,
+        "gt_error_type": "logic_error",
+        "eval_error_type": "logic_error",
+        "gt_error_step": 4,
+        "eval_error_step": 4
+      },
+      {
+        "sample_id": "S_W_gm04",
+        "hit": true,
+        "gt_error_type": "logic_error",
+        "eval_error_type": "logic_error",
+        "gt_error_step": 4,
+        "eval_error_step": 4
+      },
+      {
+        "sample_id": "S_W_sh04",
+        "hit": true,
+        "gt_error_type": "logic_error",
+        "eval_error_type": "logic_error",
+        "gt_error_step": 4,
+        "eval_error_step": 4
+      },
+      {
+        "sample_id": "S_W_ah02",
+        "hit": true,
+        "gt_error_type": "logic_error",
+        "eval_error_type": "logic_error",
+        "gt_error_step": 4,
+        "eval_error_step": 4
+      },
+      {
+        "sample_id": "S_W_tm02",
+        "hit": true,
+        "gt_error_type": "logic_error",
+        "eval_error_type": "logic_error",
+        "gt_error_step": 4,
+        "eval_error_step": 4
+      }
+    ]
+  },
+  "false_positive_rate": {
+    "answer_correct_samples": 10,
+    "flagged_invalid": 3,
+    "real_process_problems": 3,
+    "false_positives": 0,
+    "fp_rate": 0.0,
+    "manual_review": [
+      {
+        "sample_id": "S_C_mm03",
+        "kind": "real",
+        "gt_error_type": "complexity_error",
+        "eval_error_type": "complexity_error"
+      },
+      {
+        "sample_id": "S_C_ae08",
+        "kind": "real",
+        "gt_error_type": "complexity_error",
+        "eval_error_type": "complexity_error"
+      },
+      {
+        "sample_id": "S_C_hh08",
+        "kind": "real",
+        "gt_error_type": "complexity_error",
+        "eval_error_type": "complexity_error"
+      }
+    ]
+  }
+}

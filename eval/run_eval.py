@@ -1,8 +1,9 @@
 """运行端到端过程评估：对样本集逐题执行 求解(或取样本) -> 沙盒校验 -> 过程评估。
 
 产出：
-  eval/results/evaluation_results.jsonl   逐样本完整评估结果
-  eval/results/evaluation_results.csv      便于阅读的结果表格
+  eval/results/evaluation_results.jsonl        逐样本完整评估结果（--source samples）
+  eval/results/evaluation_results_live.jsonl   live 实时求解结果（--source live）
+  eval/results/evaluation_results.csv          便于阅读的结果表格
 
 用法：
   python eval/run_eval.py --source samples --backend rule
@@ -67,6 +68,22 @@ def _emit(jf, rows, res, prob, raw=""):
     )
 
 
+def output_paths(backend: str, source: str):
+    """结果文件路径（jsonl, csv）。
+
+    文件名必须**同时区分 backend 与 source**：
+      - 区分 backend：便于 UI 做 rule vs llm 对比；
+      - 区分 source：`--source live` 若与 `--source samples` 共用路径，会覆盖掉含人工真值的
+        15 个诊断样本结果，而 verify_evaluator.py / report.py / gen_demo.py 都依赖后者，
+        被覆盖后这些工具会静默退化为「0 样本、指标 None」，README 的准确率/误报率结论随之失效。
+    """
+    suffix = "" if backend == "rule" else f"_{backend}"
+    if source == "live":
+        suffix = f"_live{suffix}"
+    return (os.path.join(RESULTS_DIR, f"evaluation_results{suffix}.jsonl"),
+            os.path.join(RESULTS_DIR, f"evaluation_results{suffix}.csv"))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", choices=["samples", "live"], default="samples")
@@ -99,10 +116,7 @@ def main():
     )
 
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    # 不同后端写入不同文件，便于 UI 做 rule vs llm 对比
-    suffix = "" if args.backend == "rule" else f"_{args.backend}"
-    jsonl_path = os.path.join(RESULTS_DIR, f"evaluation_results{suffix}.jsonl")
-    csv_path = os.path.join(RESULTS_DIR, f"evaluation_results{suffix}.csv")
+    jsonl_path, csv_path = output_paths(args.backend, args.source)
 
     # live：按 --ids/--limit 选题实时求解（少量题接口）
     if args.source == "live":

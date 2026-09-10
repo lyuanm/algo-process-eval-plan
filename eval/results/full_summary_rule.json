@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-09-10 16:33:15",
+  "backend": "rule",
+  "total": 513,
+  "bank_total": 513,
+  "coverage": 1.0,
+  "final_correct": 432,
+  "final_acc": 0.8421,
+  "process_valid": 316,
+  "process_rate": 0.616,
+  "lucky_pass": 116,
+  "lucky_rate": 0.2261,
+  "process_only_fail": 197,
+  "wrong_count": 81,
+  "by_difficulty": {
+    "easy": {
+      "n": 168,
+      "final_acc": 0.8571,
+      "process_rate": 0.6786,
+      "lucky_pass": 30
+    },
+    "medium": {
+      "n": 180,
+      "final_acc": 0.8444,
+      "process_rate": 0.6056,
+      "lucky_pass": 43
+    },
+    "hard": {
+      "n": 165,
+      "final_acc": 0.8242,
+      "process_rate": 0.5636,
+      "lucky_pass": 43
+    }
+  },
+  "by_domain": {
+    "二分查找": {
+      "n": 45,
+      "final_acc": 0.8444,
+      "process_rate": 0.5111,
+      "lucky_pass": 15
+    },
+    "动态规划": {
+      "n": 45,
+      "final_acc": 0.9333,
+      "process_rate": 0.8444,
+      "lucky_pass": 4
+    },
+    "堆/贪心": {
+      "n": 45,
+      "final_acc": 0.8667,
+      "process_rate": 0.6667,
+      "lucky_pass": 9
+    },
+    "栈/队列": {
+      "n": 45,
+      "final_acc": 0.6667,
+      "process_rate": 0.4222,
+      "lucky_pass": 11
+    },
+    "数学": {
+      "n": 45,
+      "final_acc": 0.7556,
+      "process_rate": 0.6222,
+      "lucky_pass": 6
+    },
+    "字符串": {
+      "n": 45,
+      "final_acc": 0.8222,
+      "process_rate": 0.6444,
+      "lucky_pass": 8
+    },
+    "树": {
+      "n": 45,
+      "final_acc": 1.0,
+      "process_rate": 0.3556,
+      "lucky_pass": 29
+    },
+    "回溯/位运算": {
+      "n": 45,
+      "final_acc": 1.0,
+      "process_rate": 0.8889,
+      "lucky_pass": 5
+    },
+    "双指针/滑动窗口": {
+      "n": 44,
+      "final_acc": 0.8409,
+      "process_rate": 0.7045,
+      "lucky_pass": 6
+    },
+    "数组/哈希": {
+      "n": 42,
+      "final_acc": 0.8095,
+      "process_rate": 0.6905,
+      "lucky_pass": 5
+    },
+    "图": {
+      "n": 36,
+      "final_acc": 0.7778,
+      "process_rate": 0.5278,
+      "lucky_pass": 9
+    },
+    "链表": {
+      "n": 31,
+      "final_acc": 0.7419,
+      "process_rate": 0.4516,
+      "lucky_pass": 9
+    }
+  },
+  "error_type_dist": {
+    "logic_error": 136,
+    "complexity_error": 60,
+    "concept_error": 1
+  },
+  "error_type_names": {
+    "logic_error": "逻辑错误",
+    "complexity_error": "复杂度/效率错误",
+    "concept_error": "概念理解错误"
+  },
+  "error_step_dist": {
+    "1": 1,
+    "2": 60,
+    "4": 136
+  },
+  "first_failure_verdict_dist": {
+    "none": 432,
+    "WA": 65,
+    "CE": 10,
+    "RE": 6
+  },
+  "error_category_dist": {
+    "none": 316,
+    "logic_error": 136,
+    "complexity_error": 60,
+    "concept_error": 1
+  },
+  "eval_sec_median": 3.49,
+  "eval_sec_total": 1725.7,
+  "note": "513 题解答已缓存"
+}

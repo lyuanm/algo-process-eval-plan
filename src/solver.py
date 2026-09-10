@@ -74,8 +74,14 @@ def parse_solution(raw: str) -> Solution:
     )
 
 
-def solve_problem(client: Hy3Client, problem: Problem) -> Solution:
-    prompt = SOLVE_PROMPT.format(
+def build_prompt(problem: Problem) -> str:
+    """构造求解提示词。
+
+    单独抽出是为了让调用方（run_full 的日志留存）能拿到与真正发给模型**完全一致**
+    的提示词文本。日志里必须留有 prompt，才能证明模型是在「只有题面、没有答案」的
+    条件下作答——这是结果可追溯的前提。
+    """
+    return SOLVE_PROMPT.format(
         title=problem.title,
         difficulty=problem.difficulty,
         domain=problem.domain,
@@ -84,6 +90,10 @@ def solve_problem(client: Hy3Client, problem: Problem) -> Solution:
         output_format=problem.output_format,
         constraints=problem.constraints,
     )
+
+
+def solve_problem(client: Hy3Client, problem: Problem) -> Solution:
+    prompt = build_prompt(problem)
     raw = client.chat(
         [{"role": "user", "content": prompt}],
         reasoning_effort="high",

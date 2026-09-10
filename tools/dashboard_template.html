@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoJudge-Hy3 · 全量评测看板（513 题）</title>
+<style>
+:root{--bg:#f6f8fb;--card:#fff;--ink:#1f2329;--muted:#6b7280;--line:#e6e9ef;
+ --blue:#2563eb;--green:#16a34a;--red:#dc2626;--amber:#d97706;--chip:#eef2ff;--violet:#7c3aed;
+ --cyan:#0891b2;--slate:#475569;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+ background:var(--bg);color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:24px 20px 80px}
+h1{font-size:24px;margin:0 0 6px;letter-spacing:-.2px}
+.sub{color:var(--muted);font-size:13.5px;margin-bottom:20px}
+.sub b{color:var(--ink);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;
+ box-shadow:0 1px 2px rgba(16,24,40,.03)}
+.card h2{font-size:15.5px;margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.card h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block}
+.card .hint{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;position:relative;overflow:hidden}
+.kpi::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue);opacity:.85}
+.kpi.ok::after{background:var(--green)}.kpi.bad::after{background:var(--red)}
+.kpi.warn::after{background:var(--amber)}.kpi.vio::after{background:var(--violet)}
+.kpi .v{font-size:29px;font-weight:800;letter-spacing:-.5px;line-height:1.15}
+.kpi .l{font-size:12.5px;color:var(--muted);margin-top:3px;font-weight:500}
+.kpi .d{font-size:11.5px;color:var(--muted);margin-top:7px;border-top:1px dashed var(--line);padding-top:7px}
+.bar-row{display:grid;grid-template-columns:112px 1fr 92px;align-items:center;gap:10px;margin-bottom:7px;font-size:13px}
+.bar-row .lab{color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{background:#f1f5f9;border-radius:6px;height:19px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:6px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+.bar-val{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px}
+.bar-val b{color:var(--ink)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:2px 0 12px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media(max-width:900px){.two,.three{grid-template-columns:1fr}}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.step{border:1px solid var(--line);border-radius:11px;padding:12px;text-align:center;background:#fcfdff}
+.step .n{font-size:12px;color:var(--muted)}
+.step .t{font-size:13px;font-weight:600;margin:3px 0 8px}
+.step .c{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.step.hot{border-color:#fecaca;background:#fff5f5}
+.step.hot .c{color:var(--red)}
+.step.cool .c{color:var(--green)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chip{padding:6px 13px;border:1px solid var(--line);border-radius:999px;background:var(--card);cursor:pointer;
+ font-size:13px;user-select:none;transition:.15s}
+.chip:hover{border-color:#c7d2fe}
+.chip.active{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:600}
+input.search{padding:7px 13px;border:1px solid var(--line);border-radius:999px;font-size:13px;outline:none;
+ min-width:230px;font-family:inherit}
+input.search:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.tblwrap{max-height:660px;overflow:auto;border:1px solid var(--line);border-radius:11px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th{position:sticky;top:0;background:#f8fafc;z-index:2;text-align:left;padding:9px 11px;font-weight:600;
+ color:var(--slate);border-bottom:1px solid var(--line);font-size:12.5px;white-space:nowrap}
+td{padding:8px 11px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+tr.row{cursor:pointer}
+tr.row:hover td{background:#f8fafc}
+tr.row.open td{background:#eff6ff}
+.tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.t-good{background:#dcfce7;color:var(--green)}.t-bad{background:#fee2e2;color:var(--red)}
+.t-warn{background:#fef3c7;color:var(--amber)}.t-info{background:var(--chip);color:var(--blue)}
+.t-vio{background:#ede9fe;color:var(--violet)}.t-gray{background:#f1f5f9;color:var(--slate)}
+.mut{color:var(--muted);font-size:12.5px}
+.detail td{background:#fbfcfe;padding:0}
+.detail .inner{padding:14px 16px;display:grid;grid-template-columns:1.15fr 1fr;gap:16px}
+@media(max-width:900px){.detail .inner{grid-template-columns:1fr}}
+pre{background:#0f172a;color:#e2e8f0;padding:12px 14px;border-radius:9px;overflow:auto;font-size:12px;
+ max-height:340px;margin:0;line-height:1.55}
+code{font-family:"SF Mono",Consolas,Menlo,monospace}
+.stepv{display:flex;gap:8px;align-items:flex-start;margin-bottom:7px;font-size:12.5px}
+.stepv .idx{flex:0 0 20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+ font-size:11px;font-weight:700;color:#fff;background:var(--green)}
+.stepv.bad .idx{background:var(--red)}
+.stepv .txt{color:var(--slate)}
+.reason{background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px;font-size:12.5px;
+ max-height:300px;overflow:auto;white-space:pre-wrap;color:#334155}
+.footer{color:var(--muted);font-size:12px;text-align:center;margin-top:26px}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.split{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>AlgoJudge-Hy3 · 全量评测看板</h1>
+<div class="sub">
+  题库 <b>513</b> 题（LeetCode 官方，12 算法域 × 3 难度）· 模型 <b id="model">Hy3</b> ·
+  评测后端 <b id="backend">rule</b> · 生成时间 <b id="ts">—</b>
+  <br><a href="index.html">← 返回交互式报告（题库浏览 / 样本探查 / 分类体系）</a>
+</div>
+
+<div class="grid kpis" id="kpis"></div>
+
+<div class="card" id="modelcard">
+  <h2><span class="dot"></span>模型来源构成</h2>
+  <p class="hint">跑批期间若遇网关额度 / 容量限制，会更换模型接续跑剩余题目。混合来源必须逐题可追溯——
+    否则整体指标会被误读为「单一模型在 513 题上的能力」，而实际是多模型的混合结果。</p>
+  <div id="models"></div>
+</div>
+
+<div class="card">
+  <h2><span class="dot"></span>难度分层：答案正确率 vs 过程正确率</h2>
+  <p class="hint">两条柱的差距 = 该难度下「答案对、过程其实不成立」的隐蔽比例。差距越大，传统判题越不可靠。</p>
+  <div class="legend">
+    <span><i style="background:var(--blue)"></i>答案正确率（final_correct）</span>
+    <span><i style="background:var(--violet)"></i>过程正确率（process_valid）</span>
+  </div>
+  <div id="diff"></div>
+</div>
+
+<div class="card">
+  <h2><span class="dot"></span>算法域分层（12 个域）</h2>
+  <p class="hint">按答案正确率降序。可看出模型在哪些算法域上更弱、过程问题更集中。</p>
+  <div id="domain"></div>
+</div>
+
+<div class="three">
+  <div class="card">
+    <h2><span class="dot"></span>错误类型分布</h2>
+    <p class="hint">过程不成立题目的归因（两级分类的细类）</p>
+    <div id="etype"></div>
+  </div>
+  <div class="card">
+    <h2><span class="dot"></span>错误首次出现步骤</h2>
+    <p class="hint">四步骤定位分布</p>
+    <div class="steps" id="estep"></div>
+  </div>
+  <div class="card">
+    <h2><span class="dot"></span>沙盒执行 verdict</h2>
+    <p class="hint">可执行验证（ERV）逐用例结果聚合</p>
+    <div id="verdict"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="dot"></span>四步骤逐级通过率（推理链在哪一步开始崩）</h2>
+  <p class="hint">把每题的过程判定按四个约定步骤拆开统计。柱高 = 该步骤被判为「无明显问题」的题目占比；
+    相邻两步的落差即为「在此步骤首次失守」的题量。</p>
+  <div class="steps" id="stepfunnel"></div>
+  <div id="stepbars" style="margin-top:16px"></div>
+</div>
+
+<div class="two">
+  <div class="card">
+    <h2><span class="dot"></span>难度 × 错误类型（交叉定位）</h2>
+    <p class="hint">只统计过程不成立的题目，看哪一档难度集中在哪类错误。</p>
+    <div id="cross"></div>
+  </div>
+  <div class="card">
+    <h2><span class="dot"></span>算法域「答案对但过程错」集中度</h2>
+    <p class="hint">该域内推理链不成立、却通过官方用例的题目占比。越高说明该域的传统判题越不可靠。</p>
+    <div id="dlucky"></div>
+  </div>
+</div>
+
+<div class="two">
+  <div class="card">
+    <h2><span class="dot"></span>效率指标</h2>
+    <p class="hint">全量跑批的耗时构成</p>
+    <div id="perf"></div>
+  </div>
+  <div class="card">
+    <h2><span class="dot"></span>过程评估的增量价值</h2>
+    <p class="hint">传统判题 vs 本系统判定的差异构成</p>
+    <div id="value"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="dot"></span>全量题目明细（<span id="cnt">0</span> / 513）</h2>
+  <p class="hint">点击任意行展开：Hy3 四段式过程、生成代码、步骤级判定与沙盒 verdict。支持难度/结果筛选与关键词搜索。</p>
+  <div class="split">
+    <div class="chips" id="filters"></div>
+    <input class="search" id="q" placeholder="搜索题号 / 标题 / 算法域…">
+  </div>
+  <div class="tblwrap">
+    <table>
+      <thead><tr>
+        <th style="width:66px">题号</th><th>标题</th><th style="width:74px">难度</th>
+        <th style="width:112px">算法域</th><th style="width:78px">答案</th><th style="width:78px">过程</th>
+        <th style="width:96px">用例</th><th style="width:132px">错误定位</th><th style="width:66px">耗时</th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  数据来源：<code>eval/results/hy3_solutions.jsonl</code> · <code>full_eval_<span class="bk">rule</span>.jsonl</code> ·
+  <code>full_summary_<span class="bk">rule</span>.json</code>　|　由 <code>tools/gen_dashboard.py</code> 生成
+</div>
+
+</div>
+
+<script id="DATA" type="application/json">/*__DATA__*/null</script>
+<script>
+const D = JSON.parse(document.getElementById('DATA').textContent);
+const S = D.summary || {};
+const STEP_NAMES = {1:'思路/建模',2:'复杂度分析',3:'边界与处理',4:'代码实现'};
+const DIFF_CN = {easy:'Easy',medium:'Medium',hard:'Hard'};
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pct = x => (x*100).toFixed(1) + '%';
+
+document.getElementById('ts').textContent = D.generated_at || '—';
+document.getElementById('model').textContent = D.model || 'Hy3';
+document.getElementById('backend').textContent = D.backend || 'rule';
+document.querySelectorAll('.bk').forEach(e => e.textContent = D.backend || 'rule');
+
+/* ---------- ① KPI ---------- */
+(function(){
+  const s = S, n = s.total || 0;
+  const cards = [
+    {v: n + ' / ' + (s.bank_total||513), l:'已评测题数', d:'覆盖率 ' + pct(s.coverage||0), cls:'', },
+    {v: pct(s.final_acc||0), l:'答案正确率', d:`${s.final_correct||0} 题通过官方用例`, cls:'ok'},
+    {v: pct(s.process_rate||0), l:'过程正确率', d:`${s.process_valid||0} 题推理链成立`, cls:'vio'},
+    {v: s.lucky_pass||0, l:'答案对但过程错', d:'传统判题无法发现（本系统增量）', cls:'warn'},
+    {v: s.wrong_count||0, l:'答案错误', d:'已定位到具体步骤与类型', cls:'bad'},
+    {v: D.gen_sec_stats && D.gen_sec_stats.median ? D.gen_sec_stats.median + 's' : '—',
+     l:'单题生成耗时（中位）', d:'评估中位 ' + (s.eval_sec_median!=null?s.eval_sec_median+'s':'—'), cls:''},
+  ];
+  document.getElementById('kpis').innerHTML = cards.map(c =>
+    `<div class="kpi ${c.cls}"><div class="v">${c.v}</div><div class="l">${c.l}</div><div class="d">${c.d}</div></div>`
+  ).join('');
+})();
+
+/* ---------- ①b 模型来源构成 ---------- */
+(function(){
+  const md = D.models || {};
+  const keys = Object.keys(md);
+  const el = document.getElementById('models');
+  if(!keys.length){ el.innerHTML = '<div class="mut">无数据</div>'; return; }
+  const rows = keys.map(k => Object.assign({k}, md[k]));
+  const head = (keys.length > 1)
+    ? `<p class="hint" style="color:#b45309"><b>⚠️ 混合来源</b>：本题库由 <b>${keys.length}</b> 个模型共同作答
+       （${esc(D.model)}）。因此整体指标是<b>多模型混合</b>结果，不能读作单一模型在 ${S.bank_total||513} 题上的能力。
+       各模型的题目集合（难度分布）不同，横向比较仅供参考。</p>`
+    : `<p class="hint">全部 ${rows[0].n} 题由单一模型 <b>${esc(rows[0].k)}</b> 作答，指标可直接归因到该模型。</p>`;
+  el.innerHTML = head
+    + `<table><thead><tr><th>模型</th><th style="text-align:right">题数</th>
+       <th style="text-align:right">答案正确率</th><th style="text-align:right">过程正确率</th>
+       <th style="text-align:right">答案对但过程错</th></tr></thead><tbody>`
+    + rows.map(r => `<tr>
+        <td><b>${esc(r.k)}</b></td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${r.n}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${pct(r.final_acc)}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${pct(r.process_rate)}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums">${r.lucky}</td>
+      </tr>`).join('')
+    + '</tbody></table>';
+})();
+
+/* ---------- 通用条形图 ---------- */
+function bars(rows, colorFn, fmt){
+  const max = Math.max(...rows.map(r=>r.v), 0.0001);
+  return rows.map(r => {
+    const w = Math.max(2, (r.v/max)*100);
+    const c = typeof colorFn === 'function' ? colorFn(r) : colorFn;
+    return `<div class="bar-row">
+      <div class="lab" title="${esc(r.k)}">${esc(r.k)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${c}"></div></div>
+      <div class="bar-val">${fmt ? fmt(r) : `<b>${r.v}</b>`}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- ② 难度分层 ---------- */
+(function(){
+  const bd = S.by_difficulty || {};
+  const order = ['easy','medium','hard'].filter(d=>bd[d]);
+  if(!order.length){ document.getElementById('diff').innerHTML = '<div class="mut">无数据</div>'; return; }
+  document.getElementById('diff').innerHTML = order.map(d => {
+    const x = bd[d];
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px">
+        ${DIFF_CN[d]} <span class="mut">· ${x.n} 题 · 答案对但过程错 ${x.lucky_pass} 题</span>
+      </div>
+      <div class="bar-row">
+        <div class="lab">答案正确率</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${x.final_acc*100}%;background:var(--blue)"></div></div>
+        <div class="bar-val"><b>${pct(x.final_acc)}</b></div>
+      </div>
+      <div class="bar-row">
+        <div class="lab">过程正确率</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${x.process_rate*100}%;background:var(--violet)"></div></div>
+        <div class="bar-val"><b>${pct(x.process_rate)}</b></div>
+      </div>
+    </div>`;
+  }).join('');
+})();
+
+/* ---------- ③ 算法域 ---------- */
+(function(){
+  const bd = S.by_domain || {};
+  const rows = Object.entries(bd).map(([k,v])=>({k, ...v}))
+    .sort((a,b)=> b.final_acc - a.final_acc || b.n - a.n);
+  if(!rows.length){ document.getElementById('domain').innerHTML = '<div class="mut">无数据</div>'; return; }
+  const max = Math.max(...rows.map(r=>r.final_acc), 0.0001);
+  document.getElementById('domain').innerHTML = rows.map(r => `
+    <div class="bar-row">
+      <div class="lab" title="${esc(r.k)}">${esc(r.k)}</div>
+      <div class="bar-track" style="height:22px">
+        <div class="bar-fill" style="width:${(r.final_acc/max)*100}%;background:linear-gradient(90deg,#3b82f6,#2563eb)"></div>
+        <div class="bar-fill" style="width:${(r.process_rate/max)*100}%;background:rgba(124,58,237,.42);position:absolute;top:0;left:0;height:100%"></div>
+      </div>
+      <div class="bar-val">${r.n}题 · <b>${pct(r.final_acc)}</b></div>
+    </div>`).join('')
+    + '<div class="legend" style="margin-top:12px"><span><i style="background:#2563eb"></i>答案正确率</span>'
+    + '<span><i style="background:rgba(124,58,237,.42)"></i>过程正确率（叠加）</span></div>';
+})();
+
+/* ---------- ④ 错误类型 / 步骤 / verdict ---------- */
+(function(){
+  const et = S.error_type_dist || {}, names = S.error_type_names || {};
+  const rows = Object.entries(et).map(([k,v])=>({k: names[k] ? names[k].split('：')[0] : k, v, raw:k}))
+    .sort((a,b)=> b.v-a.v);
+  document.getElementById('etype').innerHTML = rows.length
+    ? bars(rows, '#dc2626')
+    : '<div class="mut">本次全量评测未发现过程不成立题目</div>';
+
+  const es = S.error_step_dist || {};
+  const total = Object.values(es).reduce((a,b)=>a+b,0) || 1;
+  document.getElementById('estep').innerHTML = [1,2,3,4].map(i=>{
+    const c = es[String(i)] || 0;
+    return `<div class="step ${c>0?'hot':'cool'}">
+      <div class="n">step ${i}</div><div class="t">${STEP_NAMES[i]}</div>
+      <div class="c">${c}</div><div class="n">${pct(c/total)}</div></div>`;
+  }).join('');
+
+  const vt = D.verdict_totals || {};
+  const desc = {AC:'通过',WA:'答案错误',TLE:'超时',RE:'运行异常',CE:'编译错误'};
+  const vrows = Object.entries(vt).map(([k,v])=>({k: k + ' · ' + (desc[k]||''), v, raw:k}))
+    .sort((a,b)=> b.v-a.v);
+  const ff = S.first_failure_verdict_dist || {};
+  const ffRows = Object.entries(ff).filter(([k])=>k!=='none')
+    .map(([k,v])=>({k:'首次失败 '+k, v})).sort((a,b)=>b.v-a.v);
+  document.getElementById('verdict').innerHTML = (vrows.length
+    ? bars(vrows, r => r.raw==='AC' ? '#16a34a' : (r.raw==='WA' ? '#dc2626' : '#d97706'))
+    : '<div class="mut">无数据</div>')
+    + (ffRows.length
+        ? '<div style="font-size:12.5px;color:var(--muted);margin:14px 0 8px;border-top:1px dashed var(--line);padding-top:11px">'
+          + '首次失败 verdict（按题去重）</div>'
+          + bars(ffRows, '#f97316')
+        : '');
+})();
+
+/* ---------- ④b 四步骤逐级通过率 ---------- */
+(function(){
+  const sp = D.step_pass || {};
+  const order = ['1','2','3','4'].filter(k => sp[k] && sp[k].total);
+  if(!order.length){ document.getElementById('stepfunnel').innerHTML='<div class="mut">无数据</div>'; return; }
+  const base = sp[order[0]].total;
+  document.getElementById('stepfunnel').innerHTML = order.map(k => {
+    const x = sp[k];
+    const drop = base - x.ok;                       // 相对第一步的累计失守题量
+    return `<div class="step ${x.rate<0.8?'hot':'cool'}">
+      <div class="n">step ${k}</div><div class="t">${esc(x.name)}</div>
+      <div class="c">${pct(x.rate)}</div>
+      <div class="n">${x.ok} / ${x.total} 题通过</div>
+      <div class="n" style="color:var(--muted)">累计失守 ${drop} 题</div></div>`;
+  }).join('');
+  const rows = order.map(k => ({k:'step '+k+' '+sp[k].name, v: sp[k].ok, total: sp[k].total}));
+  document.getElementById('stepbars').innerHTML = bars(rows,
+    r => r.v/r.total >= 0.8 ? '#16a34a' : (r.v/r.total >= 0.6 ? '#d97706' : '#dc2626'),
+    r => `<b>${r.v}</b>/${r.total} · ${pct(r.v/r.total)}`);
+})();
+
+/* ---------- ④c 难度 × 错误类型 ---------- */
+(function(){
+  const cross = D.diff_error_cross || {};
+  const diffs = ['easy','medium','hard'].filter(d => cross[d]);
+  if(!diffs.length){ document.getElementById('cross').innerHTML='<div class="mut">本次评测未发现过程不成立题目</div>'; return; }
+  const etypes = [...new Set(diffs.flatMap(d => Object.keys(cross[d])))];
+  const cell = (v, max) => {
+    if(!v) return '<td class="mut" style="text-align:center">—</td>';
+    const a = 0.14 + 0.72 * (v/max);
+    return `<td style="text-align:center"><span style="display:inline-block;min-width:30px;padding:2px 8px;
+      border-radius:7px;font-weight:700;font-variant-numeric:tabular-nums;
+      background:rgba(220,38,38,${a.toFixed(2)});color:${a>0.55?'#fff':'#7f1d1d'}">${v}</span></td>`;
+  };
+  const max = Math.max(...diffs.flatMap(d => Object.values(cross[d])), 1);
+  document.getElementById('cross').innerHTML =
+    `<table><thead><tr><th>难度</th>${etypes.map(e=>`<th style="text-align:center">${esc(e)}</th>`).join('')}<th style="text-align:center">合计</th></tr></thead><tbody>`
+    + diffs.map(d => {
+        const tot = Object.values(cross[d]).reduce((a,b)=>a+b,0);
+        return `<tr><td><span class="tag t-gray">${DIFF_CN[d]||d}</span></td>`
+          + etypes.map(e => cell(cross[d][e]||0, max)).join('')
+          + `<td style="text-align:center"><b>${tot}</b></td></tr>`;
+      }).join('')
+    + '</tbody></table><div class="mut" style="margin-top:9px">色深表示该组合题量；空白「—」表示无样本。</div>';
+})();
+
+/* ---------- ④d 算法域 lucky 集中度 ---------- */
+(function(){
+  const dl = D.domain_lucky || {};
+  const rows = Object.entries(dl).map(([k,v])=>({k, ...v}))
+    .filter(r => r.n >= 3)
+    .sort((a,b)=> b.rate - a.rate || b.lucky - a.lucky);
+  if(!rows.length){ document.getElementById('dlucky').innerHTML='<div class="mut">无数据</div>'; return; }
+  document.getElementById('dlucky').innerHTML = rows.map(r => `
+    <div class="bar-row">
+      <div class="lab" title="${esc(r.k)}">${esc(r.k)}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,r.rate*100)}%;
+        background:${r.rate>=0.25?'#d97706':(r.rate>=0.1?'#f59e0b':'#fcd34d')}"></div></div>
+      <div class="bar-val"><b>${pct(r.rate)}</b> <span class="mut">${r.lucky}/${r.n}</span></div>
+    </div>`).join('');
+})();
+
+/* ---------- ⑤ 效率 ---------- */
+(function(){
+  const g = D.gen_sec_stats || {}, s = S;
+  const rows = [
+    {k:'单题生成（中位）', v: g.median||0, unit:'s'},
+    {k:'单题生成（均值）', v: g.mean||0, unit:'s'},
+    {k:'单题生成（最慢）', v: g.max||0, unit:'s'},
+    {k:'单题生成（最快）', v: g.min||0, unit:'s'},
+    {k:'单题评估（中位）', v: s.eval_sec_median||0, unit:'s'},
+  ];
+  document.getElementById('perf').innerHTML = bars(rows, '#0891b2', r=>`<b>${r.v}${r.unit}</b>`)
+    + `<div class="mut" style="margin-top:10px">全量生成累计 ${g.total_min||0} 分钟（16 路并发调用 Hy3）·
+       评估累计 ${((s.eval_sec_total||0)/60).toFixed(1)} 分钟（6 路并发沙盒执行）</div>`;
+})();
+
+/* ---------- ⑥ 增量价值 ---------- */
+(function(){
+  const s = S, n = s.total||1;
+  const rows = [
+    {k:'答案正确且过程成立', v: (s.final_correct||0) - (s.lucky_pass||0), c:'#16a34a'},
+    {k:'答案对但过程不成立', v: s.lucky_pass||0, c:'#d97706'},
+    {k:'答案错误', v: s.wrong_count||0, c:'#dc2626'},
+  ];
+  document.getElementById('value').innerHTML = bars(rows, r=>r.c, r=>`<b>${r.v}</b> 题 · ${pct(r.v/n)}`)
+    + `<div class="mut" style="margin-top:10px">传统判题只能区分前两类的合计（"答案对"），
+       本系统把其中 <b style="color:#d97706">${s.lucky_pass||0}</b> 题单独识别为「过程不成立」——
+       这些是推理链有缺陷、但恰好通过官方用例的样本。</div>`;
+})();
+
+/* ---------- ⑦ 明细表 ---------- */
+const ITEMS = D.items || [];
+let filter = 'all', kw = '';
+
+(function(){
+  const defs = [
+    ['all','全部'], ['lucky','答案对/过程错'], ['proc','过程正确'],
+    ['wrong','答案错误'], ['easy','Easy'], ['medium','Medium'], ['hard','Hard'],
+  ];
+  document.getElementById('filters').innerHTML = defs.map(([k,l],i)=>
+    `<div class="chip ${i===0?'active':''}" data-f="${k}">${l}</div>`).join('');
+  document.querySelectorAll('.chip[data-f]').forEach(c => c.onclick = () => {
+    document.querySelectorAll('.chip[data-f]').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active'); filter = c.dataset.f; render();
+  });
+  document.getElementById('q').oninput = e => { kw = e.target.value.trim().toLowerCase(); render(); };
+})();
+
+function match(it){
+  if(filter==='lucky' && !(it.final_correct && !it.process_valid)) return false;
+  if(filter==='proc' && !it.process_valid) return false;
+  if(filter==='wrong' && it.final_correct) return false;
+  if(['easy','medium','hard'].includes(filter) && it.difficulty!==filter) return false;
+  if(kw){
+    const hay = (it.id+' '+it.title+' '+it.domain+' '+(it.error_type_name||'')).toLowerCase();
+    if(!hay.includes(kw)) return false;
+  }
+  return true;
+}
+
+function render(){
+  const list = ITEMS.filter(match);
+  document.getElementById('cnt').textContent = list.length;
+  document.getElementById('rows').innerHTML = list.map(it => {
+    const tag = it.final_correct
+      ? (it.process_valid ? '<span class="tag t-good">通过</span>' : '<span class="tag t-warn">过程错</span>')
+      : '<span class="tag t-bad">答案错</span>';
+    const pt = it.final_correct
+      ? (it.process_valid ? '<span class="tag t-good">成立</span>' : '<span class="tag t-warn">不成立</span>')
+      : '<span class="tag t-bad">不成立</span>';
+    const loc = it.error_step
+      ? `<span class="tag t-vio">step${it.error_step} ${STEP_NAMES[it.error_step]}</span>
+         <div class="mut" style="margin-top:3px">${esc(it.error_type_name||it.error_type||'')}</div>`
+      : '<span class="mut">—</span>';
+    return `<tr class="row" data-id="${it.id}">
+      <td><code>${esc(it.id)}</code></td>
+      <td>${esc(it.title)}</td>
+      <td><span class="tag t-gray">${DIFF_CN[it.difficulty]||it.difficulty}</span></td>
+      <td class="mut">${esc(it.domain)}</td>
+      <td>${tag}</td><td>${pt}</td>
+      <td class="mut">${it.passed}/${it.total}</td>
+      <td>${loc}</td>
+      <td class="mut">${it.gen_sec!=null?it.gen_sec+'s':'—'}</td>
+    </tr>
+    <tr class="detail" id="d-${it.id}" style="display:none"><td colspan="9">
+      <div class="inner">
+        <div>
+          <div style="font-weight:600;font-size:13px;margin-bottom:8px">Hy3 四段式解题过程</div>
+          <div class="reason">${esc(it.reasoning) || '<span class="mut">（无缓存过程）</span>'}</div>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:13px;margin-bottom:8px">步骤级判定与执行结果</div>
+          ${(it.steps||[]).map(s=>`<div class="stepv ${s.ok?'':'bad'}">
+              <div class="idx">${s.step}</div>
+              <div class="txt"><b>${esc(s.name)}</b> — ${s.ok?'无明显问题':esc(s.reason)}</div>
+            </div>`).join('')}
+          <div style="margin:10px 0 8px" class="mut">
+            沙盒 verdict：<b>${esc(it.verdict||'—')}</b>
+            ${it.stress?`　|　压力测试：<b>${esc(it.stress)}</b>`:''}
+            ${it.attempts>1?`　|　重试 ${it.attempts} 次`:''}
+          </div>
+          <div class="mut" style="margin-bottom:6px">判定说明：${esc(it.note)}</div>
+          <div style="font-weight:600;font-size:13px;margin:10px 0 6px">Hy3 生成代码</div>
+          <pre><code>${esc(it.code) || '（未提取到代码块）'}</code></pre>
+          ${it.url?`<div class="mut" style="margin-top:8px">原题：<a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.url)}</a></div>`:''}
+        </div>
+      </div>
+    </td></tr>`;
+  }).join('') || '<tr><td colspan="9" class="mut" style="padding:24px;text-align:center">无匹配题目</td></tr>';
+
+  document.querySelectorAll('tr.row').forEach(r => r.onclick = () => {
+    const d = document.getElementById('d-' + r.dataset.id);
+    const open = d.style.display !== 'none';
+    d.style.display = open ? 'none' : 'table-row';
+    r.classList.toggle('open', !open);
+  });
+}
+render();
+</script>
+</body>
+</html>

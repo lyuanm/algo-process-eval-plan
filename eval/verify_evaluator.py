@@ -31,6 +31,22 @@ def main():
         samples = json.load(f)
     gt_map = {s["sample_id"]: s["ground_truth"] for s in samples}
 
+    # 前置校验：结果文件必须与样本集对应。
+    # 否则会静默退化为「0 样本、准确率 None」——这正是本工具最危险的失败模式：
+    # 指标看起来只是「没数据」，实际却让人误以为评估器失去了判别力（或漏看结论失效）。
+    matched = [e for e in evals if e["sample_id"] in gt_map]
+    if not matched:
+        raise SystemExit(
+            f"输入结果与样本集不匹配：{os.path.relpath(RESULTS)} 中的 {len(evals)} 条记录"
+            f"（如 {evals[0]['sample_id']}）均不在 {os.path.relpath(SAMPLES)} 中。\n"
+            "常见原因：该文件被 `run_eval.py --source live` 的结果覆盖了"
+            "（旧版本两个 source 共用同一输出路径）。\n"
+            "修复：先重跑 `python eval/run_eval.py --source samples --backend rule` 再执行本脚本。"
+        )
+    if len(matched) < len(samples):
+        print(f"⚠️ 样本覆盖不完整：{len(matched)}/{len(samples)}，以下样本缺失："
+              f"{', '.join(sorted(set(gt_map) - {e['sample_id'] for e in evals}))}")
+
     # 逐样本比对
     compare = []
     for e in evals:

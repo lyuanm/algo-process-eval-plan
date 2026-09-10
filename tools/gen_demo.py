@@ -52,10 +52,19 @@ def parse_for_ui(raw: str):
 
 
 def load_jsonl(path):
+    """读取 jsonl，容忍被中断截断的残行（长任务场景）。"""
     if not os.path.exists(path):
         return []
+    out = []
     with open(path, "r", encoding="utf-8") as f:
-        return [json.loads(l) for l in f if l.strip()]
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                out.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return out
 
 
 def main():
@@ -64,7 +73,13 @@ def main():
     with open(SAMPLES, "r", encoding="utf-8") as f:
         samples = json.load(f)
     eval_rule = load_jsonl(os.path.join(RES_DIR, "evaluation_results.jsonl"))
-    eval_llm = load_jsonl(os.path.join(RES_DIR, "evaluation_results_llm.jsonl"))
+    # llm 侧优先取 live 结果（演示流程跑的是真实 Hy3 求解 + Hy3 裁判），
+    # 回退到 samples+llm。run_eval.py 已按 source 分文件存放，此处两种都要能读到。
+    eval_llm = []
+    for name in ("evaluation_results_live_llm.jsonl", "evaluation_results_llm.jsonl"):
+        eval_llm = load_jsonl(os.path.join(RES_DIR, name))
+        if eval_llm:
+            break
     verification = {}
     vpath = os.path.join(RES_DIR, "verification.json")
     if os.path.exists(vpath):
@@ -232,7 +247,8 @@ svg{display:block}
 <div class="wrap">
   <h1>混元算法题 · 过程评估与错误定位 · 交互报告</h1>
   <div class="sub">数据驱动视图：题集覆盖度、样本级过程判定（步骤热力 / 错误定位）、rule 与 llm 后端对比、分类体系参考。
-    <span id="meta" class="mut"></span></div>
+    <span id="meta" class="mut"></span>
+    <br><a href="dashboard.html">→ 查看全量 513 题评测看板（答案率 / 过程率 / 错误归因 / 逐题明细）</a></div>
 
   <div class="pipeline">
     <div class="stage"><span class="num">1</span><h3>题目</h3><p>算法题 + 可自动校验 checker（LeetCode/洛谷）</p></div>

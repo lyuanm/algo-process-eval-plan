@@ -7,8 +7,21 @@ __pycache__/
 *.pyc
 *.pyo
 
-# 评测产物（可再生成）
-eval/results/
+# 评测产物（体积大、可再生成，不入库）
+# 注意：必须写成 `eval/results/*` 而不是 `eval/results/`——目录级忽略会让下面的
+# `!` 白名单全部失效，导致 verification.json 等**交付要求点名的材料**也进不了仓库。
+eval/results/*
+# 例外：以下小体积结果文件是交付材料，必须入库
+#   verification.json      —— 评估器有效性验证（定位准确率 / 误报率 / 人工抽检记录）
+#   full_summary_rule.json —— 全量 513 题汇总指标
+#   hy3_solutions.jsonl    —— 逐题解答 + 模型来源标注，入库才能让评审直接复现阶段 B
+!eval/results/verification.json
+!eval/results/full_summary_rule.json
+!eval/results/hy3_solutions.jsonl
+
+# 日志：人可读的 Markdown 入库（交付材料），结构化 jsonl 体积大且可由脚本重生成
+eval/logs/*
+!eval/logs/*.md
 
 # 抓取缓存（LeetCode 原始数据缓存，63MB，可再抓取）
 data/fetch_cache/
